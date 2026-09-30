@@ -904,6 +904,7 @@ void PhaseChaitin::gather_lrg_masks( bool after_aggressive ) {
           // compile-speed or performance.
           // Note1:
           // SPARC and SPARCV9 reg_pressures are at 2 instead of 1
+          // SPARC and SPARCV9 reg_pressures are at 2 instead of 1
           // since .ad registers are defined as high and low halves.
           // These reg_pressure values remain compatible with the code
           // in is_high_pressure() which relates get_invalid_mask_size(),
@@ -925,9 +926,14 @@ void PhaseChaitin::gather_lrg_masks( bool after_aggressive ) {
           // IA64     1     1     1          1    1         50          41
           // SPARC    2     2     2          2    2         48 (24)     52 (26)
           // SPARCV9  2     2     2          2    2         48 (24)     52 (26)
+          // SPARCV9  2     2     2          2    2         48 (24)     52 (26)
           // AMD64    1     1     1          1    1         14          15
           // -----------------------------------------------------
+#if defined(SPARC)
+          lrg.set_reg_pressure(2);  // use for v9 as well
+#else
           lrg.set_reg_pressure(1);  // normally one value per register
+#endif
           if( n_type->isa_oop_ptr() ) {
             lrg._is_oop = 1;
           }
@@ -939,10 +945,18 @@ void PhaseChaitin::gather_lrg_masks( bool after_aggressive ) {
 #if defined(ARM32)
           lrg.set_reg_pressure(2);
 #elif defined(IA32)
+#if defined(SPARC) || defined(ARM32)
+          lrg.set_reg_pressure(2);
+#elif defined(IA32)
           if( ireg == Op_RegL ) {
             lrg.set_reg_pressure(2);
           } else {
             lrg.set_reg_pressure(1);
+          }
+#else
+          lrg.set_reg_pressure(1);  // normally one value per register
+#endif
+#endif
           }
 #else
           lrg.set_reg_pressure(1);  // normally one value per register
@@ -1593,6 +1607,10 @@ uint PhaseChaitin::Select( ) {
 
     // Check if a color is available and if so pick the color
     OptoReg::Name reg = choose_color( *lrg, chunk );
+#ifdef SPARC
+    debug_only(lrg->compute_set_mask_size());
+    assert(lrg->num_regs() < 2 || lrg->is_bound() || is_even(reg-1), "allocate all doubles aligned");
+#endif
 
     //---------------
     // If we fail to color and the AllStack flag is set, trigger

@@ -232,21 +232,23 @@ size_t os::current_stack_size() {
 jint os::Solaris::_os_thread_limit = 0;
 volatile jint os::Solaris::_os_thread_count = 0;
 
-julong os::available_memory() {
-  return Solaris::available_memory();
+bool os::available_memory(physical_memory_size_type& value) {
+  return Solaris::available_memory(value);
 }
 
-julong os::free_memory() {
-  return Solaris::available_memory();
+bool os::free_memory(physical_memory_size_type& value) {
+  return Solaris::available_memory(value);
 }
 
-julong os::Solaris::available_memory() {
-  return (julong)sysconf(_SC_AVPHYS_PAGES) * os::vm_page_size();
+bool os::Solaris::available_memory(physical_memory_size_type& value) {
+  julong avail_mem = (julong)sysconf(_SC_AVPHYS_PAGES) * os::vm_page_size();
+  value = static_cast<physical_memory_size_type>(avail_mem);
+  return true;
 }
 
-julong os::Solaris::_physical_memory = 0;
+physical_memory_size_type os::Solaris::_physical_memory = 0;
 
-julong os::physical_memory() {
+physical_memory_size_type os::physical_memory() {
   return Solaris::physical_memory();
 }
 
@@ -1345,8 +1347,10 @@ void os::pd_print_cpu_info(outputStream* st, char* buf, size_t buflen) {
 void os::print_memory_info(outputStream* st) {
   st->print("Memory:");
   st->print(" " SIZE_FORMAT "k page", os::vm_page_size()>>10);
-  st->print(", physical " UINT64_FORMAT "k", os::physical_memory()>>10);
-  st->print("(" UINT64_FORMAT "k free)", os::available_memory() >> 10);
+  st->print(", physical " PHYS_MEM_TYPE_FORMAT "k", os::physical_memory()>>10);
+  physical_memory_size_type avail_mem = 0;
+  (void)os::available_memory(avail_mem);
+  st->print("(" PHYS_MEM_TYPE_FORMAT "k free)", avail_mem >> 10);
   st->cr();
   (void) check_addr0(st);
 }

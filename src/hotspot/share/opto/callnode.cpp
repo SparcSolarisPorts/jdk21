@@ -68,7 +68,7 @@ Node *StartNode::Ideal(PhaseGVN *phase, bool can_reshape){
 
 //------------------------------calling_convention-----------------------------
 void StartNode::calling_convention(BasicType* sig_bt, VMRegPair *parm_regs, uint argcnt) const {
-  SharedRuntime::java_calling_convention(sig_bt, parm_regs, argcnt);
+  SharedRuntime::java_calling_convention(sig_bt, parm_regs, argcnt, false);
 }
 
 //------------------------------Registers--------------------------------------
@@ -742,7 +742,7 @@ const Type* CallNode::Value(PhaseGVN* phase) const {
 //------------------------------calling_convention-----------------------------
 void CallNode::calling_convention(BasicType* sig_bt, VMRegPair *parm_regs, uint argcnt) const {
   // Use the standard compiler calling convention
-  SharedRuntime::java_calling_convention(sig_bt, parm_regs, argcnt);
+  SharedRuntime::java_calling_convention(sig_bt, parm_regs, argcnt, true);
 }
 
 

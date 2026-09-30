@@ -102,10 +102,10 @@ class os::Solaris {
 
  protected:
   // Solaris-specific interface goes here
-  static julong available_memory();
-  static julong free_memory();
-  static julong physical_memory() { return _physical_memory; }
-  static julong _physical_memory;
+  static bool available_memory(physical_memory_size_type& value);
+  static bool free_memory(physical_memory_size_type& value);
+  static physical_memory_size_type physical_memory() { return _physical_memory; }
+  static physical_memory_size_type _physical_memory;
   static void initialize_system_info();
   static int _dev_zero_fd;
   static int get_dev_zero_fd() { return _dev_zero_fd; }

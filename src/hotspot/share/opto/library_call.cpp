@@ -3610,7 +3610,12 @@ bool LibraryCallKit::inline_native_setCurrentThread() {
   thread_obj_handle = _gvn.transform(thread_obj_handle);
   const TypePtr *adr_type = _gvn.type(thread_obj_handle)->isa_ptr();
   access_store_at(nullptr, thread_obj_handle, adr_type, arr, _gvn.type(arr), T_OBJECT, IN_NATIVE | MO_UNORDERED);
-  JFR_ONLY(extend_setCurrentThread(thread, arr);)
+#ifdef JFR_HAVE_INTRINSICS
+  // The JFR event-writer intrinsics are not available on platforms without
+  // the JFR stubs (e.g. SPARC), so the native JVM_SetCurrentThread call is
+  // never replaced and Jfr::on_set_current_thread runs there instead.
+  extend_setCurrentThread(thread, arr);
+#endif
   return true;
 }
 
@@ -6776,10 +6781,22 @@ bool LibraryCallKit::inline_aescrypt_Block(vmIntrinsics::ID id) {
   Node* k_start = get_key_start_from_aescrypt_object(aescrypt_object);
   if (k_start == nullptr) return false;
 
+#ifdef SPARC
+    // on SPARC we need to pass the original key since key expansion needs to happen in intrinsics due to
+    // compatibility issues between Java key expansion and SPARC crypto instructions
+    Node* original_k_start = get_original_key_start_from_aescrypt_object(aescrypt_object);
+    if (original_k_start == NULL) return false;
+
+    // Call the stub.
+    make_runtime_call(RC_LEAF|RC_NO_FP, OptoRuntime::aescrypt_block_Type(),
+                      stubAddr, stubName, TypePtr::BOTTOM,
+                      src_start, dest_start, k_start, original_k_start);
+#else
   // Call the stub.
   make_runtime_call(RC_LEAF|RC_NO_FP, OptoRuntime::aescrypt_block_Type(),
                     stubAddr, stubName, TypePtr::BOTTOM,
                     src_start, dest_start, k_start);
+#endif
 
   return true;
 }
@@ -6861,10 +6878,24 @@ bool LibraryCallKit::inline_cipherBlockChaining_AESCrypt(vmIntrinsics::ID id) {
   Node* r_start = array_element_address(objRvec, intcon(0), T_BYTE);
 
   // Call the stub, passing src_start, dest_start, k_start, r_start and src_len
-  Node* cbcCrypt = make_runtime_call(RC_LEAF|RC_NO_FP,
+  Node* cbcCrypt;
+#ifdef SPARC
+    // on SPARC we need to pass the original key since key expansion needs to happen in intrinsics due to
+    // compatibility issues between Java key expansion and SPARC crypto instructions
+    Node* original_k_start = get_original_key_start_from_aescrypt_object(aescrypt_object);
+    if (original_k_start == nullptr) return false;
+
+    // Call the stub, passing src_start, dest_start, k_start, r_start, src_len and original_k_start
+    cbcCrypt = make_runtime_call(RC_LEAF|RC_NO_FP,
+                                 OptoRuntime::cipherBlockChaining_aescrypt_Type(),
+                                 stubAddr, stubName, TypePtr::BOTTOM,
+                                 src_start, dest_start, k_start, r_start, len, original_k_start);
+#else
+  cbcCrypt = make_runtime_call(RC_LEAF|RC_NO_FP,
                                      OptoRuntime::cipherBlockChaining_aescrypt_Type(),
                                      stubAddr, stubName, TypePtr::BOTTOM,
                                      src_start, dest_start, k_start, r_start, len);
+#endif
 
   // return cipher length (int)
   Node* retvalue = _gvn.transform(new ProjNode(cbcCrypt, TypeFunc::Parms));
@@ -6942,6 +6973,11 @@ bool LibraryCallKit::inline_electronicCodeBook_AESCrypt(vmIntrinsics::ID id) {
   if (k_start == nullptr) return false;
 
   // Call the stub, passing src_start, dest_start, k_start, r_start and src_len
+#ifdef SPARC
+    // no SPARC version for AES/ECB intrinsics now.
+    return false;
+#endif
+
   Node* ecbCrypt = make_runtime_call(RC_LEAF | RC_NO_FP,
                                      OptoRuntime::electronicCodeBook_aescrypt_Type(),
                                      stubAddr, stubName, TypePtr::BOTTOM,
@@ -7019,6 +7055,11 @@ bool LibraryCallKit::inline_counterMode_AESCrypt(vmIntrinsics::ID id) {
   Node* used = field_address_from_object(counterMode_object, "used", "I", /*is_exact*/ false);
 
   // Call the stub, passing src_start, dest_start, k_start, r_start and src_len
+#ifdef SPARC
+    // no SPARC version for AES/CTR intrinsics now.
+    return false;
+#endif
+
   Node* ctrCrypt = make_runtime_call(RC_LEAF|RC_NO_FP,
                                      OptoRuntime::counterMode_aescrypt_Type(),
                                      stubAddr, stubName, TypePtr::BOTTOM,
@@ -7053,6 +7094,19 @@ Node * LibraryCallKit::get_key_start_from_aescrypt_object(Node *aescrypt_object)
   Node* k_start = array_element_address(objAESCryptKey, intcon(0), T_INT);
   return k_start;
 }
+
+#ifdef SPARC
+//------------------------------get_original_key_start_from_aescrypt_object-----------------------
+Node * LibraryCallKit::get_original_key_start_from_aescrypt_object(Node *aescrypt_object) {
+  Node* objAESCryptKey = load_field_from_object(aescrypt_object, "lastKey", "[B");
+  assert (objAESCryptKey != nullptr, "wrong version of com.sun.crypto.provider.AESCrypt");
+  if (objAESCryptKey == nullptr) return (Node *) nullptr;
+
+  // now have the array, need to get the start address of the lastKey array
+  Node* original_k_start = array_element_address(objAESCryptKey, intcon(0), T_BYTE);
+  return original_k_start;
+}
+#endif // SPARC
 
 //----------------------------inline_cipherBlockChaining_AESCrypt_predicate----------------------------
 // Return node representing slow path of predicate check.

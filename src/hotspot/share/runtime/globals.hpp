@@ -1194,6 +1194,9 @@ const int ObjectAlignmentInBytes = 8;
   develop(bool, VerifyFPU, false,                                           \
           "Verify FPU state (check for NaN's, etc.)")                       \
                                                                             \
+  develop(bool, VerifyThread, false,                                        \
+          "Watch the thread register for corruption (SPARC only)")          \
+                                                                            \
   develop(bool, VerifyActivationFrameSize, false,                           \
           "Verify that activation frame didn't become smaller than its "    \
           "minimal size")                                                   \
