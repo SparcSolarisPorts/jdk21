@@ -264,13 +264,9 @@ inline void ThawBase::derelativize_interpreted_frame_metadata(
   freeze_sparc_patch_link(f, f.fp());
   freeze_sparc_patch_pc(f, hf.pc());
 }
-
-inline void ThawBase::set_interpreter_frame_bottom(const frame& f,
-                                                    intptr_t* bottom) {
-  intptr_t* locals = bottom -
-      f.interpreter_frame_method()->max_locals()
-      * Interpreter::stackElementWords;
-  f.sp()[freeze_sparc_llocals_slot] = (intptr_t)locals;
-}
+// ThawBase::set_interpreter_frame_bottom was removed from the share code in
+// JDK 21 (the "copy overwrites the metadata" fix moved into the share thaw
+// path via f.set_fp(f.real_fp())), so the JDK 20 SPARC definition of it is
+// gone as well -- there is no declaration left to match.
 
 #endif // CPU_SPARC_CONTINUATIONFREEZETHAW_SPARC_INLINE_HPP

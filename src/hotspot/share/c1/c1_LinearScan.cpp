@@ -2196,7 +2196,6 @@ LIR_Opr LinearScan::calc_operand_for_interval(const Interval* interval) {
         }
 #endif // X86
 
-#if defined(ARM32)
 #ifdef SPARC
         assert(assigned_reg >= pd_first_fpu_reg && assigned_reg <= pd_last_fpu_reg, "no fpu register");
         assert(interval->assigned_regHi() >= pd_first_fpu_reg && interval->assigned_regHi() <= pd_last_fpu_reg, "no fpu register");
@@ -2211,7 +2210,6 @@ LIR_Opr LinearScan::calc_operand_for_interval(const Interval* interval) {
         assert(assigned_reg >= pd_first_fpu_reg && assigned_reg <= pd_last_fpu_reg, "no fpu register");
         assert(interval->assigned_regHi() == any_reg, "must not have hi register (double fpu values are stored in one register on Intel)");
         LIR_Opr result = LIR_OprFact::double_fpu(assigned_reg - pd_first_fpu_reg);
-#endif
 #endif
         return result;
       }

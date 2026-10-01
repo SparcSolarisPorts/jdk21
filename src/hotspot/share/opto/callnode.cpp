@@ -766,8 +766,8 @@ Node *CallNode::match( const ProjNode *proj, const Matcher *match ) {
     OptoRegPair regs = Opcode() == Op_CallLeafVector
       ? match->vector_return_value(ideal_reg)      // Calls into assembly vector routine
       : is_CallRuntime()
-        ? match->c_return_value(ideal_reg)  // Calls into C runtime
-        : match->  return_value(ideal_reg); // Calls into compiled Java code
+        ? match->c_return_value(ideal_reg, true)  // Calls into C runtime
+        : match->return_value(ideal_reg, true); // Calls into compiled Java code
     RegMask rm = RegMask(regs.first());
 
     if (Opcode() == Op_CallLeafVector) {
