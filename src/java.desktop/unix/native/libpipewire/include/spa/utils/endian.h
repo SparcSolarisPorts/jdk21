@@ -19,7 +19,7 @@
 #define bswap_32 _byteswap_ulong
 #define bswap_64 _byteswap_uint64
 #elif defined(SOLARIS)
-#include <endian.h>
+//#include <endian.h>
 #else
 #include <endian.h>
 #include <byteswap.h>
