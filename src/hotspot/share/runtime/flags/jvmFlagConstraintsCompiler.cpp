@@ -360,7 +360,7 @@ JVMFlag::Error InteriorEntryAlignmentConstraintFunc(intx value, bool verbose) {
   if (InteriorEntryAlignment % relocInfo::addr_unit() != 0) {
     JVMFlag::printError(verbose,
                         "InteriorEntryAlignment (" INTX_FORMAT ") must be "
-                        "multiple of NOP size\n");
+                        "multiple of NOP size\n", InteriorEntryAlignment);
     return JVMFlag::VIOLATES_CONSTRAINT;
   }
 #endif

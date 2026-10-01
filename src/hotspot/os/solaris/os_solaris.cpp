@@ -24,6 +24,15 @@
 
 // no precompiled headers
 #include "jvm.h"
+
+// EM_486 is the withdrawn original-ABI i486 machine type (value 6). It is
+// present in Sun/Solaris <sys/elf.h> but missing from some gcc toolchain
+// headers on Solaris, which breaks the arch compatibility table in
+// os::dll_load below. Provide the ABI value if the headers do not.
+#ifndef EM_486
+#define EM_486 6
+#endif
+
 #include "classfile/classLoader.hpp"
 #include "classfile/systemDictionary.hpp"
 #include "classfile/vmSymbols.hpp"
