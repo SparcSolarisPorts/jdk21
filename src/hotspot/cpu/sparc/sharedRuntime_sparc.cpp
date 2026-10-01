@@ -2272,6 +2272,15 @@ uint SharedRuntime::out_preserve_stack_slots() {
   return frame::register_save_words * VMRegImpl::slots_per_word;
 }
 
+// Number of stack slots between incoming argument block and the start of
+// a new frame.  The PROLOG must add this many slots to the stack.  The
+// EPILOG must remove this many slots.  SPARC needs none; JDK 20 expressed
+// this as in_preserve_stack_slots(0) in sparc.ad (JDK 21 requires a C++
+// definition per arch instead of the ADLC-generated Compile method).
+uint SharedRuntime::in_preserve_stack_slots() {
+  return 0;
+}
+
 static void gen_new_frame(MacroAssembler* masm, bool deopt) {
 //
 // Common out the new frame generation for deopt and uncommon trap

@@ -853,6 +853,28 @@ address TemplateInterpreterGenerator::generate_Reference_get_entry(void) {
   return entry;
 }
 
+// Entry point for Thread.currentThread(): return the mounted virtual
+// thread (held as an OopHandle in the JavaThread) if there is one.
+// Modeled on the aarch64/x86 JDK 21 implementations.
+address TemplateInterpreterGenerator::generate_currentThread() {
+  address entry_point = __ pc();
+
+  __ ld_ptr(G2_thread, JavaThread::vthread_offset(), Otos_i);
+  __ resolve_oop_handle(Otos_i, G3_scratch);
+
+  // _areturn
+  __ retl();                      // return from leaf routine
+  __ delayed()->mov(O5_savedSP, SP);
+
+  return entry_point;
+}
+
+// Not supported on SPARC; the regular native entries are used for these.
+address TemplateInterpreterGenerator::generate_Float_intBitsToFloat_entry() { return nullptr; }
+address TemplateInterpreterGenerator::generate_Float_floatToRawIntBits_entry() { return nullptr; }
+address TemplateInterpreterGenerator::generate_Double_longBitsToDouble_entry() { return nullptr; }
+address TemplateInterpreterGenerator::generate_Double_doubleToRawLongBits_entry() { return nullptr; }
+
 /**
  * Method entry for static native methods:
  *   int java.util.zip.CRC32.update(int crc, int b)
