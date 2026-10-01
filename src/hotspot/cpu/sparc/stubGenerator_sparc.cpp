@@ -5979,6 +5979,10 @@ void continuation_enter_cleanup(MacroAssembler* masm) {
 #undef __
 #define __ _masm->
 
+#define UCM_TABLE_MAX_ENTRIES 8
 void StubGenerator_generate(CodeBuffer* code, StubCodeGenerator::StubsKind kind) {
+  if (UnsafeCopyMemory::_table == nullptr) {
+    UnsafeCopyMemory::create_table(UCM_TABLE_MAX_ENTRIES);
+  }
   StubGenerator g(code, kind);
 }
