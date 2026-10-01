@@ -38,6 +38,9 @@
 // according to the prior table. So, we let the thread continue and let it block by itself.
 define_pd_global(bool, DontYieldALot,               true);  // yield no more than 100 times per second
 
+// Added in JDK 21 (JDK-8308043); same default as x86/aarch64/ppc/riscv/s390.
+define_pd_global(bool, DelayCompilerStubsGeneration, COMPILER2_OR_JVMCI);
+
 define_pd_global(bool, ImplicitNullChecks,          true);  // Generate code for implicit null checks
 define_pd_global(bool, TrapBasedNullChecks,         false); // Not needed on sparc.
 define_pd_global(bool, UncommonNullCast,            true);  // Uncommon-trap nulls passed to check cast

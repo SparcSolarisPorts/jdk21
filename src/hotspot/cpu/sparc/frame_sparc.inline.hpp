@@ -269,4 +269,81 @@ inline void frame::set_saved_oop_result(RegisterMap* map, oop obj) {
   *((oop*) map->location(O0->as_VMReg(), sp())) = obj;
 }
 
+// frame::sender
+//
+// JDK 21 declares frame::sender() inline in share/runtime/frame.hpp (Oracle
+// de-SPARAC'd the declaration in JDK 21; in JDK 20 it was a plain out-of-line
+// member defined in frame_sparc.cpp). The body is Oracle's JDK 20 SPARC
+// implementation, moved here unchanged: SPARC needs no interpreted/compiled
+// distinction in the sender path because all callee-save registers are
+// preserved via the register-window save area, which RegisterMap::shift_window
+// accounts for.
+
+inline frame frame::sender(RegisterMap* map) const {
+  assert(map != nullptr, "map must be set");
+
+  assert(CodeCache::find_blob(_pc) == _cb, "inconsistent");
+
+  // Default is not to follow arguments; update it accordingly below
+  map->set_include_argument_oops(false);
+
+  if (is_entry_frame())       return sender_for_entry_frame(map);
+  if (is_upcall_stub_frame()) return sender_for_upcall_stub_frame(map);
+
+  intptr_t* younger_sp = sp();
+  intptr_t* sp         = sender_sp();
+
+  // Note:  The version of this operation on any platform with callee-save
+  //        registers must update the register map (if not null).
+  //        In order to do this correctly, the various subtypes of
+  //        of frame (interpreted, compiled, glue, native),
+  //        must be distinguished.  There is no need on SPARC for
+  //        such distinctions, because all callee-save registers are
+  //        preserved for all frames via SPARC-specific mechanisms.
+  //
+  //        *** HOWEVER, *** if and when we make any floating-point
+  //        registers callee-saved, then we will have to copy over
+  //        the RegisterMap update logic from the Intel code.
+
+  // The constructor of the sender must know whether this frame is interpreted so it can set the
+  // sender's _sp_adjustment_by_callee field.  An osr adapter frame was originally
+  // interpreted but its pc is in the code cache (for c1 -> osr_frame_return_id stub), so it must be
+  // explicitly recognized.
+
+  bool frame_is_interpreted = is_interpreted_frame();
+  if (frame_is_interpreted) {
+    map->make_integer_regs_unsaved();
+    map->shift_window(sp, younger_sp);
+  } else if (_cb != nullptr) {
+    // Update the locations of implicitly saved registers to be their
+    // addresses in the register save area.
+    // For %o registers, the addresses of %i registers in the next younger
+    // frame are used.
+    map->shift_window(sp, younger_sp);
+    if (map->update_map()) {
+      // Tell GC to use argument oopmaps for some runtime stubs that need it.
+      // For C1, the runtime stub might not have oop maps, so set this flag
+      // outside of update_register_map.
+      map->set_include_argument_oops(_cb->caller_must_gc_arguments(map->thread()));
+      if (_cb->oop_maps() != nullptr) {
+        OopMapSet::update_register_map(this, map);
+      }
+    }
+  }
+  return frame(sp, younger_sp, frame_is_interpreted);
+}
+
+// SPARC routes interpreted and compiled frames through the unified sender
+// path above, so these split helpers are never called (same as JDK 20 SPARC).
+
+inline frame frame::sender_for_interpreter_frame(RegisterMap* map) const {
+  ShouldNotCallThis();
+  return sender(map);
+}
+
+inline frame frame::sender_for_compiled_frame(RegisterMap* map) const {
+  ShouldNotCallThis();
+  return sender(map);
+}
+
 #endif // CPU_SPARC_FRAME_SPARC_INLINE_HPP
