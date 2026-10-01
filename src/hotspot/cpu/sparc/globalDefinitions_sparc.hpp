@@ -30,6 +30,10 @@ const int BytesPerInstWord = 4;
 
 const int StackAlignmentInBytes = (2*wordSize);
 
+// Deliberate segfault address for the controlled-crash path in vmError.cpp
+// (added in JDK 21, defined per-arch); same default as x86/aarch64/arm/riscv.
+const size_t pd_segfault_address = 1024;
+
 // Indicates whether the C calling conventions require that
 // 32-bit integer argument values are extended to 64 bits.
 const bool CCallingConventionRequiresIntsAsLongs = true;
