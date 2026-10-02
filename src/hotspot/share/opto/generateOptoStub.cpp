@@ -107,6 +107,10 @@ void GraphKit::gen_stub(address C_function,
   //
   Node *adr_sp = basic_plus_adr(top(), thread, in_bytes(JavaThread::last_Java_sp_offset()));
   Node *last_sp = frameptr();
+#if defined(SPARC) && defined(_LP64)
+  // SPARC frameptr() is biased; JavaFrameAnchor stores an unbiased SP.
+  last_sp = basic_plus_adr(top(), last_sp, (intptr_t) STACK_BIAS);
+#endif
   store_to_memory(control(), adr_sp, last_sp, T_ADDRESS, NoAlias, MemNode::unordered);
 
   // Set _thread_in_native
