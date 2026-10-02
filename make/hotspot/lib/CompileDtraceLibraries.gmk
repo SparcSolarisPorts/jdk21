@@ -33,13 +33,21 @@ ifeq ($(call check-jvm-feature, dtrace), true)
     ############################################################################
     # Build the stand-alone dtrace libraries.
 
+    ifeq ($(TOOLCHAIN_TYPE), gcc)
+      DTRACE_LIB_CFLAGS := -m64 -pthread -fPIC -fvisibility=hidden
+      DTRACE_LIB_LDFLAGS := -m64 -pthread $(SHARED_LIBRARY_FLAGS)
+    else
+      DTRACE_LIB_CFLAGS := -m64 -G -mt -KPIC -xldscope=hidden
+      DTRACE_LIB_LDFLAGS := -m64 -mt -xnolib $(SHARED_LIBRARY_FLAGS)
+    endif
+
     LIBJVM_DTRACE_OUTPUTDIR := $(JVM_VARIANT_OUTPUTDIR)/libjvm_dtrace
     $(eval $(call SetupNativeCompilation, BUILD_LIBJVM_DTRACE, \
         NAME := jvm_dtrace, \
         OUTPUT_DIR := $(JVM_LIB_OUTPUTDIR), \
         SRC := $(TOPDIR)/src/java.base/solaris/native/libjvm_dtrace, \
-        CFLAGS := $(JNI_INCLUDE_FLAGS) -m64 -G -mt -KPIC -xldscope=hidden, \
-        LDFLAGS := -m64 -mt -xnolib $(SHARED_LIBRARY_FLAGS), \
+        CFLAGS := $(JNI_INCLUDE_FLAGS) $(DTRACE_LIB_CFLAGS), \
+        LDFLAGS := $(DTRACE_LIB_LDFLAGS), \
         LIBS := $(LIBDL) -lthread -ldoor, \
         OBJECT_DIR := $(LIBJVM_DTRACE_OUTPUTDIR)/objs, \
     ))
@@ -51,8 +59,8 @@ ifeq ($(call check-jvm-feature, dtrace), true)
         NAME := jvm_db, \
         OUTPUT_DIR := $(JVM_LIB_OUTPUTDIR), \
         SRC := $(TOPDIR)/src/java.base/solaris/native/libjvm_db, \
-        CFLAGS := -I$(DTRACE_GENSRC_DIR) $(JNI_INCLUDE_FLAGS) -m64 -G -mt -KPIC -xldscope=hidden, \
-        LDFLAGS := -m64 -mt -xnolib $(SHARED_LIBRARY_FLAGS), \
+        CFLAGS := -I$(DTRACE_GENSRC_DIR) $(JNI_INCLUDE_FLAGS) $(DTRACE_LIB_CFLAGS), \
+        LDFLAGS := $(DTRACE_LIB_LDFLAGS), \
         OBJECT_DIR := $(LIBJVM_DB_OUTPUTDIR)/objs, \
     ))
 
