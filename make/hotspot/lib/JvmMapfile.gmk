@@ -51,11 +51,15 @@ endif
 ifeq ($(call isTargetOs, solaris), true)
   ifeq ($(call check-jvm-feature, dtrace), true)
     # Additional mapfiles that are only used when dtrace is enabled
+    DTRACE_SYMBOLS_SUFFIX :=
+    ifeq ($(TOOLCHAIN_TYPE), gcc)
+      DTRACE_SYMBOLS_SUFFIX := -gcc
+    endif
     ifeq ($(call check-jvm-feature, compiler2), true)
       # This also covers the case of compiler1+compiler2.
-      SYMBOLS_SRC += $(TOPDIR)/make/data/hotspot-symbols/symbols-solaris-dtrace-compiler2
+      SYMBOLS_SRC += $(TOPDIR)/make/data/hotspot-symbols/symbols-solaris-dtrace-compiler2$(DTRACE_SYMBOLS_SUFFIX)
     else ifeq ($(call check-jvm-feature, compiler1), true)
-      SYMBOLS_SRC += $(TOPDIR)/make/data/hotspot-symbols/symbols-solaris-dtrace-compiler1
+      SYMBOLS_SRC += $(TOPDIR)/make/data/hotspot-symbols/symbols-solaris-dtrace-compiler1$(DTRACE_SYMBOLS_SUFFIX)
     endif
   endif
 endif
