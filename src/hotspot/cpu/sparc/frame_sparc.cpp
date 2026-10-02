@@ -23,6 +23,7 @@
  */
 
 #include "precompiled.hpp"
+#include "jvm.h"
 #include "code/codeCache.hpp"
 #include "compiler/oopMap.hpp"
 #include "interpreter/interpreter.hpp"
@@ -35,6 +36,8 @@
 #include "runtime/frame.inline.hpp"
 #include "runtime/handles.inline.hpp"
 #include "runtime/javaCalls.hpp"
+#include "runtime/javaThread.hpp"
+#include "runtime/safefetch.hpp"
 #include "runtime/monitorChunk.hpp"
 #include "runtime/signature.hpp"
 #include "runtime/stubCodeGenerator.hpp"
@@ -643,6 +646,51 @@ void JavaFrameAnchor::capture_last_Java_pc(intptr_t* sp) {
     intptr_t* _post_Java_sp = frame::next_younger_sp_or_null(last_Java_sp(), sp);
     // Really this should never fail otherwise VM call must have non-standard
     // frame linkage (bad) or stack is not properly flushed (worse).
+    if (_post_Java_sp == NULL) {
+      // Failure-only diagnostics. Keep the guarantee: this is not a recovery path.
+      // Avoid frame walking here, because that is precisely what has failed.
+      JavaThread* jt = JavaThread::current();
+      uintptr_t low = (uintptr_t)jt->stack_end();
+      uintptr_t high = (uintptr_t)jt->stack_base();
+      uintptr_t target = (uintptr_t)last_Java_sp();
+      uintptr_t cursor = (uintptr_t)sp;
+      const intptr_t unreadable = (intptr_t)-1;
+      jio_fprintf(stderr,
+          "[sparc-anchor] thread=%p state=%d flags=0x%x current_sp=%p last_sp=%p last_pc=%p stack=[%p,%p)\n",
+          (void*)jt, (int)jt->thread_state(), (unsigned int)_flags,
+          (void*)cursor, (void*)target, (void*)last_Java_pc(),
+          (void*)low, (void*)high);
+      for (int hop = 0; hop < 128; hop++) {
+        if (cursor == target) {
+          jio_fprintf(stderr, "[sparc-anchor] reached target at hop %d\n", hop);
+          break;
+        }
+        // The saved SPARC register window occupies 16 machine words.
+        if ((cursor & (2 * wordSize - 1)) != 0 || cursor < low ||
+            cursor >= high || high - cursor < 16 * wordSize) {
+          jio_fprintf(stderr, "[sparc-anchor] stop: cursor is unaligned or outside stack\n");
+          break;
+        }
+        intptr_t* window = (intptr_t*)cursor;
+        intptr_t raw_fp = SafeFetchN(window + FP->sp_offset_in_saved_window(), unreadable);
+        intptr_t raw_i7 = SafeFetchN(window + I7->sp_offset_in_saved_window(), unreadable);
+        if (raw_fp == unreadable || raw_i7 == unreadable) {
+          jio_fprintf(stderr, "[sparc-anchor] stop: unreadable saved window at %p\n", (void*)cursor);
+          break;
+        }
+        uintptr_t next = (uintptr_t)raw_fp + STACK_BIAS;
+        jio_fprintf(stderr,
+            "[sparc-anchor] hop=%d sp=%p saved_fp=%p next_sp=%p return_pc=%p\n",
+            hop, (void*)cursor, (void*)(uintptr_t)raw_fp, (void*)next,
+            (void*)((uintptr_t)raw_i7 + frame::pc_return_offset));
+        if (next <= cursor) {
+          jio_fprintf(stderr, "[sparc-anchor] stop: frame link does not move toward stack base\n");
+          break;
+        }
+        cursor = next;
+      }
+      fflush(stderr);
+    }
     guarantee(_post_Java_sp != NULL, "bad stack!");
     _last_Java_pc = (address) _post_Java_sp[ I7->sp_offset_in_saved_window()] + frame::pc_return_offset;
 
