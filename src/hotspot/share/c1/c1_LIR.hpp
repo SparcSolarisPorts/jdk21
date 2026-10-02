@@ -1699,6 +1699,10 @@ class LIR_OpBranch: public LIR_Op2 {
  friend class LIR_OpVisitState;
 
  private:
+#ifdef SPARC
+  // SPARC branches must distinguish 32-bit icc from 64-bit xcc.
+  BasicType     _sparc_type = T_ILLEGAL;
+#endif
   Label*        _label;
   BlockBegin*   _block;  // if this is a branch to a block, this is the block
   BlockBegin*   _ublock; // if this is a float-branch, this is the unordered block
@@ -1717,6 +1721,11 @@ class LIR_OpBranch: public LIR_Op2 {
 
   // for unordered comparisons
   LIR_OpBranch(LIR_Condition cond, BlockBegin* block, BlockBegin* ublock);
+
+#ifdef SPARC
+  BasicType type() const { return _sparc_type; }
+  void set_sparc_type(BasicType type) { _sparc_type = type; }
+#endif
 
   LIR_Condition cond() const {
     return condition();
@@ -2103,6 +2112,9 @@ class LIR_List: public CompilationResourceObj {
   LIR_Opr       _cmp_opr1;
   LIR_Opr       _cmp_opr2;
 #endif
+#ifdef SPARC
+  BasicType     _sparc_cmp_type = T_ILLEGAL;
+#endif
 
  public:
   void append(LIR_Op* op) {
@@ -2119,6 +2131,20 @@ class LIR_List: public CompilationResourceObj {
     set_cmp_oprs(op);
     // lir_cmp set cmp oprs only on riscv
     if (op->code() == lir_cmp) return;
+#endif
+
+#ifdef SPARC
+    // Preserve the compare width on the branch before allocation and scheduling.
+    // JDK 21 removed the explicit BasicType argument from branch(), but SPARC
+    // still needs it to select icc versus xcc in emit_opBranch().
+    if (op->code() == lir_cmp) {
+      BasicType type = op->as_Op2()->in_opr1()->type();
+      _sparc_cmp_type = is_subword_type(type) ? T_INT : type;
+    } else if ((op->code() == lir_branch || op->code() == lir_cond_float_branch) &&
+               op->as_OpBranch()->cond() != lir_cond_always) {
+      assert(_sparc_cmp_type != T_ILLEGAL, "conditional branch needs a compare type");
+      op->as_OpBranch()->set_sparc_type(_sparc_cmp_type);
+    }
 #endif
 
     _operations.append(op);

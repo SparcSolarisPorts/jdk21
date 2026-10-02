@@ -1706,19 +1706,19 @@ void LIR_Assembler::arith_op(LIR_Code code, LIR_Opr left, LIR_Opr right, LIR_Opr
 void LIR_Assembler::intrinsic_op(LIR_Code code, LIR_Opr value, LIR_Opr tmp, LIR_Opr dest, LIR_Op* op) {
   switch (code) {
     case lir_tan: {
-      assert(thread->is_valid(), "preserve the thread object for performance reasons");
+      assert(tmp->is_valid(), "preserve the thread object for performance reasons");
       assert(dest->as_double_reg() == F0, "the result will be in f0/f1");
       break;
     }
     case lir_sqrt: {
-      assert(!thread->is_valid(), "there is no need for a thread_reg for dsqrt");
+      assert(!tmp->is_valid(), "there is no need for a thread_reg for dsqrt");
       FloatRegister src_reg = value->as_double_reg();
       FloatRegister dst_reg = dest->as_double_reg();
       __ fsqrt(FloatRegisterImpl::D, src_reg, dst_reg);
       break;
     }
     case lir_abs: {
-      assert(!thread->is_valid(), "there is no need for a thread_reg for fabs");
+      assert(!tmp->is_valid(), "there is no need for a thread_reg for fabs");
       FloatRegister src_reg = value->as_double_reg();
       FloatRegister dst_reg = dest->as_double_reg();
       __ fabs(FloatRegisterImpl::D, src_reg, dst_reg);
@@ -2949,6 +2949,8 @@ void LIR_Assembler::emit_profile_type(LIR_OpProfileType* op) {
 
     __ bind(do_update);
     __ st_ptr(tmp2, mdo_addr);
+
+    __ bind(next);
   }
 }
 

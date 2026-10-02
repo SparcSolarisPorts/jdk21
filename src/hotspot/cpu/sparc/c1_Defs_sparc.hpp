@@ -70,7 +70,7 @@ enum {
 };
 
 enum {
-  pd_two_operand_lir_form = true
+  pd_two_operand_lir_form = false
 };
 
 // the number of stack required by ArrayCopyStub
