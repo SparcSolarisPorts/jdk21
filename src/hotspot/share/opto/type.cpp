@@ -63,7 +63,6 @@ const Type::TypeInfo Type::_type_info[Type::lastype] = {
   { Bad,             T_ARRAY,      "array:",        false, Node::NotAMachineReg, relocInfo::none          },  // Array
   { Bad,             T_ARRAY,      "interfaces:",   false, Node::NotAMachineReg, relocInfo::none          },  // Interfaces
 
-#if defined(PPC64)
 #if defined(SPARC)
   { Bad,             T_ILLEGAL,    "vectormask:",   false, Op_RegVectMask,       relocInfo::none          },  // VectorMask.
   { Bad,             T_ILLEGAL,    "vectora:",      false, Op_VecA,              relocInfo::none          },  // VectorA.
@@ -96,7 +95,6 @@ const Type::TypeInfo Type::_type_info[Type::lastype] = {
   { Bad,             T_ILLEGAL,    "vectorx:",      false, Op_VecX,              relocInfo::none          },  // VectorX
   { Bad,             T_ILLEGAL,    "vectory:",      false, Op_VecY,              relocInfo::none          },  // VectorY
   { Bad,             T_ILLEGAL,    "vectorz:",      false, Op_VecZ,              relocInfo::none          },  // VectorZ
-#endif
 #endif
   { Bad,             T_ADDRESS,    "anyptr:",       false, Op_RegP,              relocInfo::none          },  // AnyPtr
   { Bad,             T_ADDRESS,    "rawptr:",       false, Op_RegP,              relocInfo::none          },  // RawPtr
