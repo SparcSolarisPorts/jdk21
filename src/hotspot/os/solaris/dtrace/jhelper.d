@@ -144,7 +144,10 @@ dtrace:helper:ustack:
    */
   this->pc = arg0;
 
-#if defined(__i386) || defined(__amd64)
+/* The interpreter method is in saved register %l2 on SPARC. */
+#if defined(__sparc) || defined(__sparc__)
+  this->methodPtr = copyin_ptr(arg1 + 2 * sizeof(pointer) + STACK_BIAS);
+#elif defined(__i386) || defined(__amd64)
   this->methodPtr = copyin_ptr(arg1 + OFFSET_interpreter_frame_method);
 #else
 #error "Don't know architecture"
